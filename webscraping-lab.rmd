@@ -1,1 +1,17 @@
-update this file with an R markdown file
+PlayerStats <- function(name="David Aardsma"){
+  surname <- tolower(substr(name,as.vector(gregexpr(" ",name))[[1]][1]+1,nchar(name)))
+  letter <- substr(surname,1,1)
+  surna <- substr(surname,1,5)
+  fi <- tolower(substr(name,1,2))
+  url <- paste("http://www.baseball-reference.com/players/",letter,"/",sep="")
+  html <- read_html(url)
+  players <- html %>% html_nodes("b a") %>% html_text()
+  url <- paste("http://www.baseball-reference.com/players/",letter,"/",surna,fi,"01.shtml",sep="")
+  html <- read_html(url)
+  head <- html %>% html_nodes(".stats_pullout .poptip") %>% html_text() 
+  data <- html %>% html_nodes(".stats_pullout .p1 p, .stats_pullout .p2 p, .stats_pullout .p3 p") %>% html_text()
+  type <- html %>% html_nodes(".stats_pullout strong") %>% html_text()
+  position <- html %>% html_nodes("#meta p:nth-child(2)") %>% html_text()
+  df <- data.frame(head=rep(head, each=length(type)), data=data, type = rep(type, length(type)),position = rep(position,length(type)))
+  df
+}
