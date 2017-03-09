@@ -1,3 +1,4 @@
+```{r}
 PlayerStats <- function(name="David Aardsma"){
   surname <- tolower(substr(name,as.vector(gregexpr(" ",name))[[1]][1]+1,nchar(name)))
   letter <- substr(surname,1,1)
@@ -15,3 +16,4 @@ PlayerStats <- function(name="David Aardsma"){
   df <- data.frame(head=rep(head, each=length(type)), data=data, type = rep(type, length(type)),position = rep(position,length(type)))
   df
 }
+```
