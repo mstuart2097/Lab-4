@@ -1,0 +1,93 @@
+---
+title: "Lab 4"
+author: "Ben Buzzee, Matt Stuart, Akshay Yadav"
+date: "March 9, 2017"
+output: html_document
+---
+
+```{r, echo=F, message=F, warning=F, results=F}
+library(rvest)
+library(tidyverse)
+```
+
+
+For this lab we were tasked with creating a function that scraped and cleaned player data from
+baseball-reference.com. First, we created a function that took a letter input and returned 
+a dataframe consisting of players with last names starting with the input letter and the url
+extension to their particular web page. We called this function *players*.
+
+```{r}
+
+
+players <- function(letter = "a"){
+  url <- paste0("http://www.baseball-reference.com/players/", letter, "/" )
+  html <- read_html(url)
+  players <- html %>% html_nodes("b a") %>% html_text()
+  links <- html %>% html_nodes("b a") %>% html_attr(name="href")
+  playerlist <- data.frame(players=players, links = links)
+  return(playerlist)
+}
+
+glimpse(players())
+```
+
+<br>
+
+Next, we wrote a function that took the link extension provided by the above function as an argument and scraped and cleaned the statistics associated with one particular player. The output of this function is a dataframe of statistics.
+
+```{r}
+
+getStats <- function(link) {
+  s <- html_session("http://www.baseball-reference.com")
+  s <- s %>% jump_to(link)
+  html <- read_html(s)
+  type <- html %>% html_nodes(".stats_pullout .poptip") %>% html_text() 
+  values <- html %>% html_nodes(".stats_pullout .p1 p, .stats_pullout .p2 p, .stats_pullout .p3 p") %>%
+            html_text() %>% as.numeric()
+  what <- html %>% html_nodes(".stats_pullout strong") %>% html_text()
+  position<-html %>% html_nodes("#meta p:nth-child(2)") %>% html_text()
+  position<-gsub("[[:space:]]","",position)
+  position<-gsub("Position\\:","",position)
+  df <- data.frame(type=rep(type, each=length(what)), values=values, what = rep(what, length(values)), 
+                   position=rep(position, length(values)))
+  df <- df %>% as_data_frame()
+}
+```
+<br>
+
+Finally, we wrap both of the above in a function that takes a letter and number of players as inputs
+and outputs a data frame with a column for player names, links, and a column of statistics dataframes.
+
+```{r}
+collect_bbdat <- function(letter = "a", num_players = 10){
+            player_dat <- players(letter)[1:num_players,] %>% 
+                          mutate(career = links %>% purrr::map(getStats))
+            return(player_dat)
+}
+
+d <- collect_bbdat()
+
+glimpse(d)
+```
+
+<br>
+We decided to focus our visualization on the WAR (Wins Above Replacement) statistic because it is one numerical summary designed to capture a players total contribution to the team beyond what would be expected from a typical player.
+
+
+First we need to unnest our dataframe, then filter according to the value of interest. We also need to remove repeated rows.
+```{r, warning=F}
+war <- d %>% unnest %>% filter(type=="WAR", what == "Career") %>% unique()
+
+head(war)
+```
+<br>
+
+Since we are dealing with a single quantitative variable and relatively low counts, a dotplot is a clean
+way to visually inspect the data.
+
+```{r, message=F}
+war %>% ggplot(aes(x=values)) + geom_dotplot() + labs(x="W.A.R.", y = "Count")
+
+```
+
+
